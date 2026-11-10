@@ -1,0 +1,7 @@
+{
+  "name": "testes-geolocalizacao",
+  "private": true,
+  "description": "Testes automatizados da sprint de localização em tempo real (26 a 30/10)",
+  "scripts": { "test": "node sprint_test.js" },
+  "devDependencies": { "leaflet": "1.9.4", "playwright": "1.47.2" }
+}
