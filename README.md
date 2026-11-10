@@ -95,8 +95,12 @@ A área restrita (login + gestão de ocorrências) foi retirada em 02/11/2026.
 - Ícones por tipo, todos no mesmo estilo (selo com degradê, contorno branco e brilho):
   Furto, Roubo, Agressão, Vandalismo, Ameaça. No mapa viram alfinetes com ponta, como no
   Waze. Os desenhos ficam em `ICON_GLYPH` e as cores em `ICON_THEME`, em `js/app.js`.
+<<<<<<< HEAD
 - **Busca por bairro como filtro**: buscar um bairro faz o mapa mostrar só as ocorrências dele
   (ver seção abaixo). Filtros por período (controle segmentado com pílula deslizante) e por tipo
+=======
+- Busca por bairro, filtros por período (controle segmentado com pílula deslizante) e por tipo
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
 - **Geolocalização em tempo real**: o botão de localização no canto inferior direito liga e
   desliga o acompanhamento (ponto azul, anel de 1 km, contador, bairro mais próximo,
   Recentralizar, pausa em segundo plano, avisos de sinal fraco/permissão/fora da área).
@@ -106,6 +110,7 @@ A área restrita (login + gestão de ocorrências) foi retirada em 02/11/2026.
   inferior direito. No celular, os filtros viram uma gaveta inferior arrastável.
 - Resumo ao vivo (RF12): contagem por tipo e os 5 bairros com mais registros.
 
+<<<<<<< HEAD
 ### Busca por bairro como filtro (09/11)
 
 Ao buscar um bairro (pela sugestão, Enter ou botão "Buscar"), o mapa passa a mostrar
@@ -144,6 +149,8 @@ Medição com o processador 4 vezes mais lento (simulando um celular intermediá
 seguidos no zoom 14: **antes**, 29 travadas acima de 50 ms (3,6 s no total, pior quadro de
 440 ms); **depois**, nenhuma (pior quadro de 39 ms).
 
+=======
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
 ## APIs e bibliotecas externas
 
 | Serviço | Para quê | Chave? |
@@ -186,9 +193,13 @@ npx playwright install chromium
 npm test
 ```
 
+<<<<<<< HEAD
 São 79 testes: os 50 da geolocalização (todos continuam passando), 18 da busca por bairro
 como filtro e 11 do desempenho do zoom (alfinetes não recriados, nenhuma travada acima de
 100 ms em zooms seguidos, alfinetes sem `drop-shadow`).
+=======
+Os 50 testes continuam passando com a interface nova.
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
 
 ## Aviso importante
 

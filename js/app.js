@@ -7,7 +7,10 @@
   // Tempo mínimo do skeleton. Hoje os dados vêm do localStorage (instantâneo);
   // com a API real o skeleton fica na tela durante o fetch de verdade.
   const SKELETON_MIN_MS = 600;
+<<<<<<< HEAD
   const ZOOM_PONTOS = 14;   // a partir deste zoom os alfinetes de cada ocorrência aparecem
+=======
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
 
   const BAIRROS = [
     {nome:"Centro Norte", lat:-15.5950, lng:-56.0925},
@@ -107,15 +110,22 @@
   /* ---------------- STATE ---------------- */
   let occurrences = [];
   let filtered = [];
+<<<<<<< HEAD
   let filteredTodosBairros = [];   // mesmos filtros de período e tipo, sem o filtro de bairro
   let map, heatLayer, occLayerGroup, bairroLayerGroup, searchLayer;
   let searchPoint = null;
   let pinsVisible = false;  // a camada de alfinetes está no mapa?
   let bairroFiltro = null;  // bairro buscado: com ele, o mapa mostra só as ocorrências desse bairro
+=======
+  let map, heatLayer, occLayerGroup, bairroLayerGroup, searchLayer;
+  let searchPoint = null;
+  let pinsVisible = false;
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
   let periodSeg = null;   // controle segmentado do período (UI.segmented)
   const NEAR_RADIUS = 1000; // raio, em metros, do resumo "perto de você"
   const CITY_CENTER = [-15.601, -56.0979];
 
+<<<<<<< HEAD
   /* ---------------- HEAT LAYER (canvas, no external plugin) ----------------
      Desempenho (09/11):
      - redesenha no máximo uma vez por quadro (requestAnimationFrame) e só no fim do
@@ -124,10 +134,14 @@
        então a mancha acompanha o mapa em vez de "pular" no fim;
      - reaproveita o canvas de rascunho e o "carimbo" do ponto em vez de criar a cada vez;
      - lê e pinta só o retângulo onde há pontos, não a tela inteira. */
+=======
+  /* ---------------- HEAT LAYER (canvas, no external plugin) ---------------- */
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
   const HeatLayer = L.Layer.extend({
     initialize(points, options){
       this._points = points || [];
       this._opt = Object.assign({radius:28, maxOpacity:0.82}, options);
+<<<<<<< HEAD
       this._frame = null;
     },
     setPoints(points){ this._points = points; this._agendar(); },
@@ -159,6 +173,27 @@
       const escala = this._map.getZoomScale(e.zoom);
       const desloc = this._map._latLngBoundsToNewLayerBounds(this._limites, e.zoom, e.center).min;
       L.DomUtil.setTransform(this._canvas, desloc, escala);
+=======
+    },
+    setPoints(points){ this._points = points; this._redraw(); },
+    onAdd(map){
+      this._map = map;
+      this._canvas = L.DomUtil.create('canvas','heat-canvas');
+      map.getPanes().overlayPane.appendChild(this._canvas);
+      map.on('moveend zoomend resize', this._reset, this);
+      this._reset();
+    },
+    onRemove(map){
+      L.DomUtil.remove(this._canvas);
+      map.off('moveend zoomend resize', this._reset, this);
+    },
+    _reset(){
+      const size = this._map.getSize();
+      const topLeft = this._map.containerPointToLayerPoint([0,0]);
+      L.DomUtil.setPosition(this._canvas, topLeft);
+      this._canvas.width = size.x; this._canvas.height = size.y;
+      this._redraw();
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
     },
     _circle(r){
       const c = document.createElement('canvas');
@@ -188,6 +223,7 @@
     },
     _redraw(){
       if(!this._map || !this._canvas) return;
+<<<<<<< HEAD
       const map = this._map, size = map.getSize(), w = size.x, h = size.y;
 
       // posição e tamanho do canvas (só realoca a memória quando o tamanho do mapa muda)
@@ -223,15 +259,42 @@
       let img;
       try{ img = octx.getImageData(x0, y0, x1-x0, y1-y0); } catch(e){ return; }
       const data = img.data, grad = this._gradient(), maxA = 255*this._opt.maxOpacity;
+=======
+      const ctx = this._canvas.getContext('2d');
+      ctx.clearRect(0,0,this._canvas.width,this._canvas.height);
+      if(!this._points.length) return;
+      const r = this._opt.radius;
+      const off = document.createElement('canvas');
+      off.width = this._canvas.width; off.height = this._canvas.height;
+      const octx = off.getContext('2d');
+      const circle = this._circle(r);
+      this._points.forEach(p=>{
+        const cp = this._map.latLngToContainerPoint([p.lat,p.lng]);
+        if(cp.x < -r || cp.y < -r || cp.x > off.width+r || cp.y > off.height+r) return;
+        octx.globalAlpha = 0.5;
+        octx.drawImage(circle, cp.x-r, cp.y-r);
+      });
+      let img;
+      try{ img = octx.getImageData(0,0,off.width,off.height); } catch(e){ return; }
+      const data = img.data;
+      const grad = this._gradient();
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
       for(let i=3;i<data.length;i+=4){
         const a = data[i];
         if(a){
           const idx = a*4;
           data[i-3] = grad[idx]; data[i-2] = grad[idx+1]; data[i-1] = grad[idx+2];
+<<<<<<< HEAD
           data[i] = a < maxA ? a : maxA;
         }
       }
       ctx.putImageData(img, x0, y0);
+=======
+          data[i] = Math.min(a, 255*this._opt.maxOpacity);
+        }
+      }
+      ctx.putImageData(img,0,0);
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
     }
   });
 
@@ -272,9 +335,13 @@
     if(baseLayer){ map.removeLayer(baseLayer); map.attributionControl.removeAttribution(OSM_ATTRIB); }
     baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; CARTO',
+<<<<<<< HEAD
       subdomains:'abcd', maxZoom: 19,
       updateWhenZooming: false,   // não baixa mapa a cada passo do zoom, só no fim
       keepBuffer: 4               // guarda mais quadros em volta: arrastar fica mais liso
+=======
+      subdomains:'abcd', maxZoom: 19
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
     }).addTo(map);
     baseLayer.once('load', hideMapSkeleton);
   }
@@ -306,12 +373,17 @@
     setTimeout(hideMapSkeleton, 12000);   // nunca deixa o skeleton preso na tela
     L.control.scale({position:'bottomleft', imperial:false}).addTo(map);
     heatLayer = new HeatLayer([]).addTo(map);
+<<<<<<< HEAD
     occLayerGroup = L.layerGroup();   // entra e sai do mapa conforme o zoom (atualizarVisibilidadePontos)
+=======
+    occLayerGroup = L.layerGroup().addTo(map);
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
     bairroLayerGroup = L.layerGroup().addTo(map);
     searchLayer = L.layerGroup().addTo(map);
     map.on('locationfound', onLocationFound);
     map.on('locationerror', onLocationError);
     map.on('zoomend', ()=>{
+<<<<<<< HEAD
       atualizarVisibilidadePontos();      // antes: apagava e recriava todos os alfinetes a cada zoom
       const note = $('legendNote');
       if(note) note.textContent = map.getZoom() >= ZOOM_PONTOS
@@ -322,6 +394,14 @@
     // (backdrop-filter refeito a cada quadro sobre o mapa é o que mais pesa no celular).
     map.on('movestart zoomstart', ()=>document.body.classList.add('map-moving'));
     map.on('moveend', ()=>document.body.classList.remove('map-moving'));
+=======
+      renderPointMarkers(!pinsVisible);   // os alfinetes só "caem" quando aparecem
+      const note = $('legendNote');
+      if(note) note.textContent = map.getZoom() >= 14
+        ? 'Clique num ícone para ver a ocorrência.'
+        : 'Aproxime o mapa para ver cada ocorrência.';
+    });
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
   }
 
   /* ---------------- FILTERING ---------------- */
@@ -332,17 +412,25 @@
     const from = $('dateFrom').value;
     const to = $('dateTo').value;
     const tipos = selectedTipos();
+<<<<<<< HEAD
     const todosBairros = occurrences.filter(o=>{
+=======
+    const inPeriod = occurrences.filter(o=>{
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
       if(o.status === 'inativo') return false;
       if(from && o.data_hora < from) return false;
       if(to && o.data_hora > to) return false;
       return true;
     });
+<<<<<<< HEAD
     // busca por bairro: só o bairro buscado
     const inPeriod = bairroFiltro ? todosBairros.filter(o=>o.bairro === bairroFiltro) : todosBairros;
     filtered = tipos.length ? inPeriod.filter(o=>tipos.includes(o.tipo_ocorrencia)) : inPeriod;
     // as sugestões da busca contam todos os bairros, mesmo com um bairro filtrado
     filteredTodosBairros = tipos.length ? todosBairros.filter(o=>tipos.includes(o.tipo_ocorrencia)) : todosBairros;
+=======
+    filtered = tipos.length ? inPeriod.filter(o=>tipos.includes(o.tipo_ocorrencia)) : inPeriod;
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
     renderTypeCounts(inPeriod, tipos);
     renderAll(opts);
     // RN-G7: com a localização ligada, o contador acompanha os filtros
@@ -364,8 +452,12 @@
 
   function renderBairroMarkers(){
     bairroLayerGroup.clearLayers();
+<<<<<<< HEAD
     const lista = bairroFiltro ? BAIRROS.filter(b => b.nome === bairroFiltro) : BAIRROS;
     lista.forEach(b=>{
+=======
+    BAIRROS.forEach(b=>{
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
       const items = filtered.filter(o=>o.bairro === b.nome);
       const icon = L.divIcon({
         className:'',
@@ -498,10 +590,15 @@
   /* alfinete para o mapa: selo + ponta + sombra no chão; a ponta marca o local */
   function pinHtml(tipo, w){
     const h = Math.round(w * 60/48);
+<<<<<<< HEAD
     // a sombra é desenhada no próprio SVG (antes era filter: drop-shadow no CSS, que pesava no zoom)
     return `<svg class="pin" width="${w}" height="${h}" viewBox="0 0 48 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <ellipse cx="24" cy="56.5" rx="6.5" ry="2.2" fill="#000" opacity=".38"/>
       <circle cx="24" cy="26.6" r="22" fill="#000" opacity=".22"/>
+=======
+    return `<svg class="pin" width="${w}" height="${h}" viewBox="0 0 48 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <ellipse cx="24" cy="56.5" rx="6.5" ry="2.2" fill="#000" opacity=".38"/>
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
       <path d="M15.5 39 L24 54 L32.5 39 Z" fill="#fff"/>
       <path d="M18.6 39 L24 49.4 L29.4 39 Z" fill="${ICON_THEME[tipo].c2}"/>
       ${badgeSvg(tipo)}
@@ -519,6 +616,7 @@
     return MARKER_ICONS[tipo];
   }
 
+<<<<<<< HEAD
   /* Os alfinetes são montados só quando os dados ou os filtros mudam (antes: a cada zoom).
      animate=false: os alfinetes não "caem" de novo. */
   function renderPointMarkers(animate){
@@ -540,6 +638,19 @@
     pinsVisible = mostrar;
     if(mostrar){ $('map').classList.remove('pins-static'); occLayerGroup.addTo(map); }
     else map.removeLayer(occLayerGroup);
+=======
+  /* animate=false: só mudou o zoom com os alfinetes já na tela, então eles não "caem" de novo */
+  function renderPointMarkers(animate){
+    $('map').classList.toggle('pins-static', !animate);
+    occLayerGroup.clearLayers();
+    pinsVisible = map.getZoom() >= 14;
+    if(!pinsVisible) return;
+    filtered.forEach(o=>{
+      L.marker([o.lat,o.lng], {icon:markerIcon(o.tipo_ocorrencia), title:o.tipo_ocorrencia, alt:o.tipo_ocorrencia, zIndexOffset:500})
+        .on('click', ()=>showOccurrenceDetail(o))
+        .addTo(occLayerGroup);
+    });
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
   }
 
   function tipoColor(tipo){
@@ -627,9 +738,14 @@
     $('btnClearTypes').classList.toggle('hidden', selected.length === 0);
     // "Limpar" da barra só fica ativo quando há algum filtro ligado
     const periodoAtivo = !document.querySelector('#presetRow .preset[data-days="0"]').classList.contains('active');
+<<<<<<< HEAD
     $('btnResetFilters').disabled = !periodoAtivo && selected.length === 0 && !bairroFiltro;
     $('periodLabel').textContent = periodoTexto() + (bairroFiltro ? ' · ' + bairroFiltro : '');
     atualizarChipBairro();
+=======
+    $('btnResetFilters').disabled = !periodoAtivo && selected.length === 0;
+    $('periodLabel').textContent = periodoTexto();
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
   }
 
   function periodoTexto(){
@@ -675,7 +791,10 @@
 
   /* limpar todos os filtros (barra da gaveta e estado vazio) */
   function limparFiltros(){
+<<<<<<< HEAD
     tirarFiltroBairro();
+=======
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
     document.querySelectorAll('#typeChecks input:checked').forEach(i=>{ i.checked = false; });
     $('dateFrom').value = ''; $('dateTo').value = '';
     $('dateRow').classList.add('hidden');
@@ -738,6 +857,7 @@
     const b = BAIRROS.find(x=>x.nome.toLowerCase() === term) ||
               BAIRROS.find(x=>x.nome.toLowerCase().includes(term));
     if(b){
+<<<<<<< HEAD
       // busca por bairro vira filtro: mapa, contadores e ranking passam a mostrar só esse bairro
       searchLayer.clearLayers(); searchPoint = null;
       input.value = b.nome; $('btnClearSearch').hidden = false;
@@ -748,6 +868,13 @@
       showBairroSummary(b, filtered, {mover:false});
       input.blur();
       UI.haptic('light');
+=======
+      searchLayer.clearLayers(); searchPoint = null;
+      pararDeSeguir();
+      map.setView([b.lat,b.lng], 14);
+      showBairroSummary(b, filtered.filter(o=>o.bairro === b.nome), {mover:false});
+      input.blur();
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
       return;
     }
 
@@ -758,8 +885,11 @@
     try{
       const r = await geocode(raw);
       if(!r){ toast('Endereço não encontrado em Cuiabá/Várzea Grande. Tente "rua, número, bairro".', 'warning'); return; }
+<<<<<<< HEAD
       // endereço mostra o que há em volta dele, de qualquer bairro: sai o filtro de bairro
       if(bairroFiltro){ bairroFiltro = null; applyFilters(); }
+=======
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
       searchPoint = {lat:parseFloat(r.lat), lng:parseFloat(r.lon), label:r.display_name};
       searchLayer.clearLayers();
       const pin = L.divIcon({className:'', html:'<div class="search-pin"></div>', iconSize:[26,34], iconAnchor:[13,32]});
@@ -779,6 +909,7 @@
     }
   }
 
+<<<<<<< HEAD
   /* ---- filtro por bairro (busca) ----
      tirarFiltroBairro: só desliga (quem chama aplica os filtros depois).
      limparFiltroBairro: desliga e já atualiza o mapa. */
@@ -796,6 +927,8 @@
     $('bairroChipNome').textContent = bairroFiltro || '';
   }
 
+=======
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
   /* ---------------- REFRESH (RF07) ---------------- */
   async function refreshData(){
     const btn = $('btnRefresh');
@@ -899,8 +1032,11 @@
       setGeoEstado('desligado', 'A localização só funciona em HTTPS (no Render já funciona). Use a busca por bairro.', 'error');
       return;
     }
+<<<<<<< HEAD
     // quem liga a localização quer ver o que há em volta: o filtro de um bairro buscado sai
     limparFiltroBairro();
+=======
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
     GEO.seguindo = true; GEO.primeiraLeitura = true;
     GEO.ultimaCalc = null; GEO.bairroAtual = null;
     setGeoEstado('buscando', 'Buscando sua posição... Se o navegador perguntar, permita o acesso à localização.');
@@ -1125,6 +1261,7 @@
     $('btnRefresh').addEventListener('click', refreshData);
     $('btnSearch').addEventListener('click', doSearch);
     // busca: botão "limpar" (×) aparece quando há texto, como no iPhone
+<<<<<<< HEAD
     $('searchInput').addEventListener('input', ()=>{
       const vazio = !$('searchInput').value.trim();
       $('btnClearSearch').hidden = vazio;
@@ -1137,12 +1274,24 @@
       $('searchInput').focus();
     });
     $('btnBairroChipClear').addEventListener('click', ()=>{ limparFiltroBairro(); UI.haptic('light'); });
+=======
+    $('searchInput').addEventListener('input', ()=>{ $('btnClearSearch').hidden = !$('searchInput').value; });
+    $('btnClearSearch').addEventListener('click', ()=>{
+      $('searchInput').value = ''; $('btnClearSearch').hidden = true;
+      searchLayer.clearLayers(); searchPoint = null;
+      $('searchInput').focus();
+    });
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
     // sugestões de bairro (componente UI.suggest) — registrado antes do Enter da busca
     const semAcento = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     UI.suggest($('searchInput'), {
       source: termo => BAIRROS
         .filter(b => semAcento(b.nome).includes(semAcento(termo)))
+<<<<<<< HEAD
         .map(b => ({label:b.nome, sub: filteredTodosBairros.filter(o=>o.bairro === b.nome).length + ' registros no período'})),
+=======
+        .map(b => ({label:b.nome, sub: filtered.filter(o=>o.bairro === b.nome).length + ' registros no período'})),
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
       extra: termo => BAIRROS.some(b => semAcento(b.nome) === semAcento(termo))
         ? null : {label:'Buscar “' + termo + '” como endereço'},
       onPick: () => doSearch()

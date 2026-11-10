@@ -1,6 +1,9 @@
 // T9 — testes automatizados da sprint de geolocalização em tempo real
 // Atualizado em 02/11/2026: a lista de bairros agora é o componente de sugestões (UI.suggest).
+<<<<<<< HEAD
 // Atualizado em 09/11/2026: busca por bairro como filtro e desempenho do zoom.
+=======
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
 const {chromium, devices} = require('playwright');
 const path = require('path'), fs = require('fs');
 // roda a partir de projeto-integrador/testes/: o app está na pasta de cima
@@ -38,8 +41,11 @@ const estado = p => p.getAttribute('#geoBar','data-estado');
 const userDot = p => p.evaluate(() => { const el=[...document.querySelectorAll('.leaflet-geo-pane path.leaflet-interactive')]; return {n:el.length, d: el[0] && el[0].getAttribute('d'), fill: el[0] && el[0].getAttribute('fill')}; });
 const circulos = p => p.evaluate(() => { const w = el => el ? el.getBoundingClientRect().width : 0;
   return {anel: w(document.querySelector('.leaflet-overlay-pane path[stroke-dasharray]')), precisao: w(document.querySelector('.leaflet-overlay-pane path[stroke="none"]'))}; });
+<<<<<<< HEAD
 const rotulos = p => p.$$eval('.bairro-label', ds => ds.map(d=>d.textContent.trim()));
 const pixelsCalor = p => p.evaluate(() => { const c=document.querySelector('canvas.heat-canvas'); const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data; let n=0; for(let i=3;i<d.length;i+=4) if(d[i]) n++; return n; });
+=======
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
 const sobrepoe = (a, b) => a && b && a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 
 (async () => {
@@ -108,6 +114,7 @@ const sobrepoe = (a, b) => a && b && a.x < b.x + b.width && b.x < a.x + a.width 
     ok('Sem erros no console', errs.length===0, errs.join(' / '));
     await ctx.close();
   }
+<<<<<<< HEAD
 
   // ---------- Busca por bairro filtra o mapa (09/11) ----------
   {
@@ -177,6 +184,8 @@ const sobrepoe = (a, b) => a && b && a.x < b.x + b.width && b.x < a.x + a.width 
     ok('Zoom: sem erros', errs.length===0, errs.join(' / '));
     await ctx.close();
   }
+=======
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
   {
     const {ctx, page} = await abrir(browser, {permissions:[]});
     await page.click('#btnGeo'); await page.waitForTimeout(1200);

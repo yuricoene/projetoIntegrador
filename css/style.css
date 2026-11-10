@@ -113,12 +113,15 @@ label.cell:active:has(.switch){background:transparent;}
   background:var(--glass);border:1px solid var(--border);box-shadow:var(--shadow);
   backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);}
 
+<<<<<<< HEAD
 /* Desempenho: enquanto o mapa se move (classe colocada pelo app.js), o vidro para de
    desfocar o mapa a cada quadro (o fundo já é 86% opaco, a diferença quase não aparece).
    O desfoque volta quando o mapa para. */
 body.map-moving :is(.brand,.search,.fab,.zoom-group,.legend-card,.detail-panel,.panel-toggle,.empty-state,.geo-bar,.bairro-chip,.sidebar){
   backdrop-filter:none;-webkit-backdrop-filter:none;}
 
+=======
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
 /* entrada da interface ao abrir o app: cada bloco desliza e aparece (item 1) */
 .brand,.search,.actions,.sidebar,.legend-card,.map-tools{animation:uiIn var(--dur-sheet) var(--ease-out) both;}
 .search{animation-delay:.04s;} .actions{animation-delay:.08s;} .sidebar{animation-delay:.1s;}
@@ -176,6 +179,7 @@ body.map-moving :is(.brand,.search,.fab,.zoom-group,.legend-card,.detail-panel,.
 .suggest-item.extra .suggest-label{color:var(--accent);}
 .suggest-sub{font-size:.74rem;color:var(--text-faint);}
 
+<<<<<<< HEAD
 /* ---------- Filtro de bairro (aparece depois de buscar um bairro) ---------- */
 .bairro-chip{position:fixed;top:calc(var(--gap) + var(--top-h) + 10px);left:50%;transform:translateX(-50%);z-index:998;
   display:none;align-items:center;gap:8px;padding:5px 5px 5px 12px;border-radius:22px;font-size:.84rem;color:var(--text-dim);
@@ -190,6 +194,8 @@ body.map-moving :is(.brand,.search,.fab,.zoom-group,.legend-card,.detail-panel,.
 .bairro-chip-x:active{transform:scale(.94);}
 @media (hover:hover){ .bairro-chip-x:hover{background:rgba(var(--accent-rgb),.28);} }
 
+=======
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
 /* ---------- Botões redondos ---------- */
 .actions{position:fixed;top:var(--gap);right:var(--gap);z-index:1000;display:flex;gap:8px;}
 .fab{width:var(--top-h);height:var(--top-h);border-radius:var(--radius);display:grid;place-items:center;}
@@ -399,10 +405,15 @@ body.map-moving :is(.brand,.search,.fab,.zoom-group,.legend-card,.detail-panel,.
   color:var(--text);font-size:11.5px;font-weight:500;padding:4px 9px;border-radius:20px;white-space:nowrap;
   transform:translate(-50%,-100%);box-shadow:0 3px 10px rgba(0,0,0,.45);cursor:pointer;transition:border-color var(--dur-fast);}
 .bairro-label b{color:var(--accent);font-weight:700;margin-left:2px;font-variant-numeric:tabular-nums;}
+<<<<<<< HEAD
 /* sem filter: drop-shadow nos alfinetes — com dezenas deles, o filtro era refeito a cada quadro do zoom
    e travava o mapa. A sombra agora vem desenhada no próprio SVG (pinHtml no app.js). */
 .occ-marker .pin{display:block;overflow:visible;transform-origin:50% 90%;transition:transform var(--dur-base) var(--ease-spring);
   animation:pinDrop var(--dur-slow) var(--ease-spring) both;}
+=======
+.occ-marker .pin{display:block;overflow:visible;transform-origin:50% 90%;transition:transform var(--dur-base) var(--ease-spring);
+  filter:drop-shadow(0 3px 4px rgba(0,0,0,.45));animation:pinDrop var(--dur-slow) var(--ease-spring) both;}
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
 .occ-marker:focus-visible{outline:none;}
 /* ao só mudar o zoom, os alfinetes não "caem" de novo: a animação é para quando aparecem */
 #map.pins-static .occ-marker .pin{animation:none;}
@@ -666,7 +677,10 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.75);opacity:.
   .only-mobile{display:inline-flex !important;}
   .search,.actions{top:calc(var(--gap) + var(--safe-t));}
   .search{left:var(--gap);right:calc(2*var(--gap) + var(--top-h));transform:none;width:auto;border-radius:14px;}
+<<<<<<< HEAD
   .bairro-chip{top:calc(var(--gap) + var(--top-h) + 8px + var(--safe-t));left:var(--gap);transform:none;}
+=======
+>>>>>>> 40d877449aedf8e8cab36cd33e396586b0e2eb17
   /* no celular a busca é confirmada pela tecla "buscar" do teclado, como nos apps */
   .search-kbd,.search-go{display:none;}
   /* 16px nos campos: abaixo disso o iPhone dá zoom na página ao tocar no campo */
