@@ -123,14 +123,20 @@
      - durante a animação do zoom o canvas só é esticado (zoomanim), sem redesenhar,
        então a mancha acompanha o mapa em vez de "pular" no fim;
      - reaproveita o canvas de rascunho e o "carimbo" do ponto em vez de criar a cada vez;
-     - lê e pinta só o retângulo onde há pontos, não a tela inteira. */
+     - lê e pinta só o retângulo onde há pontos, não a tela inteira.
+     Tema (10/11): as cores vêm do tema (TEMAS[...].calor) e trocam com setCores(). */
   const HeatLayer = L.Layer.extend({
     initialize(points, options){
       this._points = points || [];
-      this._opt = Object.assign({radius:28, maxOpacity:0.82}, options);
+      this._opt = Object.assign({radius:28, maxOpacity:0.62, cores:['#ffb3ba','#ef4444','#f97316','#facc15']}, options);
       this._frame = null;
     },
     setPoints(points){ this._points = points; this._agendar(); },
+    setCores(cores, maxOpacity){
+      this._opt.cores = cores; this._opt.maxOpacity = maxOpacity;
+      this._gcache = null;          // refaz a escala de cores
+      this._agendar();
+    },
     onAdd(map){
       this._map = map;
       const animado = map.options.zoomAnimation && L.Browser.any3d;
@@ -177,10 +183,11 @@
       c.width = 1; c.height = 256;
       const ctx = c.getContext('2d');
       const g = ctx.createLinearGradient(0,0,0,256);
-      g.addColorStop(0.00,'#4a0d12');
-      g.addColorStop(0.40,'#c4161c');
-      g.addColorStop(0.72,'#ff6b2c');
-      g.addColorStop(1.00,'#ffd23f');
+      const c4 = this._opt.cores;
+      g.addColorStop(0.00,c4[0]);
+      g.addColorStop(0.40,c4[1]);
+      g.addColorStop(0.72,c4[2]);
+      g.addColorStop(1.00,c4[3]);
       ctx.fillStyle = g;
       ctx.fillRect(0,0,1,256);
       this._gcache = ctx.getImageData(0,0,1,256).data;
@@ -235,13 +242,82 @@
     }
   });
 
+  /* ---------------- TEMA CLARO (sol) / ESCURO (lua) — 10/11 ----------------
+     Claro é o padrão aprovado pelo grupo; escuro é opcional (cansa menos a vista à noite).
+     A escolha fica salva neste aparelho (localStorage "tema") e já é aplicada no <head>
+     do index.html, antes de a página aparecer, para não piscar.
+     A troca é feita pela chave sol/lua ao lado da busca (#btnTheme).
+     O CSS troca as cores da interface pelos tokens de html[data-theme="dark"]. Aqui trocamos
+     o que o CSS não alcança: o mapa base, as cores do mapa de calor e do ponto azul. */
+  const KEY_TEMA = 'tema';
+  const TEMAS = {
+    light: {
+      estilo: 'https://tiles.openfreemap.org/styles/positron',   // mapa vetorial claro
+      raster: 'light_all',                                        // reserva (CARTO) clara
+      calor: ['#ffb3ba','#ef4444','#f97316','#facc15'], calorMax: 0.62,
+      me: '#1f7bff', meCinza: '#8b94a3',                          // = --me do CSS claro
+      barra: '#ffffff'                                            // cor da barra do navegador
+    },
+    dark: {
+      estilo: 'https://tiles.openfreemap.org/styles/dark',       // mapa vetorial escuro
+      raster: 'dark_all',
+      calor: ['#4a0d12','#c4161c','#ff6b2c','#ffd23f'], calorMax: 0.82,
+      me: '#3d9bff', meCinza: '#6e6e78',                          // = --me do CSS escuro
+      barra: '#0b1018'
+    }
+  };
+  let tema = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+
+  function aplicarTema(novo){
+    novo = novo === 'dark' ? 'dark' : 'light';
+    const mudou = novo !== tema;
+    tema = novo;
+    const t = TEMAS[tema], html = document.documentElement;
+    // troca de cor suave (só cores; nada se mexe de lugar), desligada se a pessoa pediu menos movimento
+    if(mudou && !UI.reduceMotion()){
+      html.classList.add('theme-anim');
+      clearTimeout(aplicarTema.timer);
+      aplicarTema.timer = setTimeout(()=>html.classList.remove('theme-anim'), 460);
+    }
+    html.dataset.theme = tema;
+    const mc = document.querySelector('meta[name="theme-color"]'); if(mc) mc.setAttribute('content', t.barra);
+    const cs = document.querySelector('meta[name="color-scheme"]'); if(cs) cs.setAttribute('content', tema);
+    try{ localStorage.setItem(KEY_TEMA, tema); }catch(e){}
+    atualizarControlesTema();
+    if(!mudou) return;
+    if(heatLayer) heatLayer.setCores(t.calor, t.calorMax);
+    GEO_AZUL = t.me; GEO_CINZA = t.meCinza;
+    if(GEO.anel) GEO.anel.setStyle({color:GEO_AZUL, fillColor:GEO_AZUL});
+    if(GEO.circulo) GEO.circulo.setStyle({fillColor:GEO_AZUL});
+    if(GEO.marcador) GEO.marcador.setStyle({fillColor: GEO.estado === 'pausado' ? GEO_CINZA : GEO_AZUL});
+    trocarMapaBase();
+  }
+
+  /* chave do tema (interruptor ao lado da busca): claro = laranja com sol; escuro = preto com lua.
+     É um role="switch" chamado "Tema escuro": ligado (bolinha à direita) = escuro. */
+  function atualizarControlesTema(){
+    const btn = $('btnTheme');
+    if(!btn) return;
+    btn.setAttribute('aria-checked', String(tema === 'dark'));
+    btn.title = 'Mudar para o tema ' + (tema === 'dark' ? 'claro' : 'escuro');
+  }
+
+  function trocarMapaBase(){
+    if(!baseLayer) return;
+    const t = TEMAS[tema];
+    if(usingFallback){ baseLayer.setUrl(rasterUrl()); return; }
+    try{ baseLayer.getMaplibreMap().setStyle(t.estilo); }
+    catch(e){ console.warn('Falha ao trocar o estilo do mapa:', e); }
+  }
+  function rasterUrl(){ return 'https://{s}.basemaps.cartocdn.com/' + TEMAS[tema].raster + '/{z}/{x}/{y}{r}.png'; }
+
   /* ---------------- MAPA BASE (OpenStreetMap) ----------------
-     Mapa vetorial escuro do OpenFreeMap, feito com dados do OpenStreetMap.
+     Mapa vetorial claro (estilo positron) do OpenFreeMap, feito com dados do OpenStreetMap.
      É gratuito e não precisa de chave de API. Carregado no Leaflet pelo
      plugin @maplibre/maplibre-gl-leaflet.
      Se o navegador não tiver WebGL ou o estilo não carregar, usa tiles
-     raster escuros (CARTO, também com dados do OSM).                     */
-  const OSM_STYLE = 'https://tiles.openfreemap.org/styles/dark';
+     raster claros (CARTO, também com dados do OSM).                     */
+  // o estilo (claro ou escuro) vem de TEMAS[tema].estilo
   const OSM_ATTRIB = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> ' +
     '&copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> ' +
     'Dados &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
@@ -270,7 +346,7 @@
     usingFallback = true;
     console.warn('Mapa vetorial indisponível, usando raster:', reason);
     if(baseLayer){ map.removeLayer(baseLayer); map.attributionControl.removeAttribution(OSM_ATTRIB); }
-    baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    baseLayer = L.tileLayer(rasterUrl(), {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; CARTO',
       subdomains:'abcd', maxZoom: 19,
       updateWhenZooming: false,   // não baixa mapa a cada passo do zoom, só no fim
@@ -285,7 +361,7 @@
       return;
     }
     try{
-      baseLayer = L.maplibreGL({ style: OSM_STYLE }).addTo(map);
+      baseLayer = L.maplibreGL({ style: TEMAS[tema].estilo }).addTo(map);
       // o plugin não publica o crédito no Leaflet; a licença do OSM exige que ele apareça
       map.attributionControl.addAttribution(OSM_ATTRIB);
       const ml = baseLayer.getMaplibreMap();
@@ -305,7 +381,7 @@
     addBaseMap();
     setTimeout(hideMapSkeleton, 12000);   // nunca deixa o skeleton preso na tela
     L.control.scale({position:'bottomleft', imperial:false}).addTo(map);
-    heatLayer = new HeatLayer([]).addTo(map);
+    heatLayer = new HeatLayer([], {cores: TEMAS[tema].calor, maxOpacity: TEMAS[tema].calorMax}).addTo(map);
     occLayerGroup = L.layerGroup();   // entra e sai do mapa conforme o zoom (atualizarVisibilidadePontos)
     bairroLayerGroup = L.layerGroup().addTo(map);
     searchLayer = L.layerGroup().addTo(map);
@@ -498,10 +574,9 @@
   /* alfinete para o mapa: selo + ponta + sombra no chão; a ponta marca o local */
   function pinHtml(tipo, w){
     const h = Math.round(w * 60/48);
-    // a sombra é desenhada no próprio SVG (antes era filter: drop-shadow no CSS, que pesava no zoom)
     return `<svg class="pin" width="${w}" height="${h}" viewBox="0 0 48 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <ellipse cx="24" cy="56.5" rx="6.5" ry="2.2" fill="#000" opacity=".38"/>
-      <circle cx="24" cy="26.6" r="22" fill="#000" opacity=".22"/>
+      <circle cx="24" cy="26.6" r="22" fill="#0f172a" opacity=".2"/>
       <path d="M15.5 39 L24 54 L32.5 39 Z" fill="#fff"/>
       <path d="M18.6 39 L24 49.4 L29.4 39 Z" fill="${ICON_THEME[tipo].c2}"/>
       ${badgeSvg(tipo)}
@@ -520,6 +595,7 @@
   }
 
   /* Os alfinetes são montados só quando os dados ou os filtros mudam (antes: a cada zoom).
+     A sombra deles vem desenhada no SVG (pinHtml), sem filter: drop-shadow no CSS.
      animate=false: os alfinetes não "caem" de novo. */
   function renderPointMarkers(animate){
     $('map').classList.toggle('pins-static', !animate);
@@ -560,6 +636,7 @@
   function openDetail(){
     const panel = $('detailPanel');
     const jaAberto = panel.classList.contains('show');
+    if(UI.isMobile()) closeSheet();                    // a gaveta de detalhes sobe por cima da principal
     panel.classList.add('show');
     // no celular o painel é uma gaveta: o botão voltar fecha
     if(!jaAberto && UI.isMobile()) UI.layers.open('detail', closeDetail);
@@ -628,6 +705,8 @@
     // "Limpar" da barra só fica ativo quando há algum filtro ligado
     const periodoAtivo = !document.querySelector('#presetRow .preset[data-days="0"]').classList.contains('active');
     $('btnResetFilters').disabled = !periodoAtivo && selected.length === 0 && !bairroFiltro;
+    $('periodLabel').textContent = periodoTexto();
+    $('chipPeriodLabel').textContent = periodoTexto();
     $('periodLabel').textContent = periodoTexto() + (bairroFiltro ? ' · ' + bairroFiltro : '');
     atualizarChipBairro();
   }
@@ -754,7 +833,7 @@
     if(geocoding) return;
     geocoding = true;
     const btn = $('btnSearch');
-    btn.disabled = true; btn.textContent = '…';
+    btn.disabled = true; btn.classList.add('busy');
     try{
       const r = await geocode(raw);
       if(!r){ toast('Endereço não encontrado em Cuiabá/Várzea Grande. Tente "rua, número, bairro".', 'warning'); return; }
@@ -775,7 +854,7 @@
       toast('A busca de endereços está indisponível agora. Tente de novo em instantes.', 'error');
     }finally{
       geocoding = false;
-      btn.disabled = false; btn.textContent = 'Ir';
+      btn.disabled = false; btn.classList.remove('busy');
     }
   }
 
@@ -792,8 +871,12 @@
     if(tirarFiltroBairro()) applyFilters();
   }
   function atualizarChipBairro(){
-    $('bairroChip').classList.toggle('show', !!bairroFiltro);
+    const chip = $('bairroChip');
+    const antes = chip.classList.contains('show');
+    chip.classList.toggle('show', !!bairroFiltro);
     $('bairroChipNome').textContent = bairroFiltro || '';
+    // no celular o aviso fica dentro da gaveta baixinha: ela remede a altura
+    if(antes !== !!bairroFiltro && sheet) sheet.refresh();
   }
 
   /* ---------------- REFRESH (RF07) ---------------- */
@@ -832,7 +915,7 @@
   const GEO_COBERTURA = 5000;       // m: além disso, fora da área do protótipo (RN-G5)
   const GEO_TOLERANCIA_ERRO = 30000; // ms: erro passageiro logo após uma leitura boa é ignorado
   const GEO_OPCOES = { watch:true, setView:false, enableHighAccuracy:true, maximumAge:5000, timeout:15000 };
-  const GEO_AZUL = '#3d9bff', GEO_CINZA = '#6e6e78';   // mesma cor da variável --me do CSS
+  let GEO_AZUL = TEMAS[tema].me, GEO_CINZA = TEMAS[tema].meCinza;   // mesma cor da variável --me do CSS
 
   const GEO = {
     estado: 'desligado',
@@ -868,6 +951,7 @@
     btn.classList.toggle('active', ligado);
     btn.classList.toggle('loading', GEO.estado === 'buscando');
     $('geoSwitch').checked = ligado;                    // interruptor da gaveta acompanha o botão
+    $('chipNearMe').setAttribute('aria-pressed', String(ligado));
     const bar = $('geoBar');
     bar.classList.toggle('show', ligado);           // RN-G3: indicador visível enquanto ligado
     bar.dataset.estado = GEO.estado;
@@ -1102,22 +1186,22 @@
   }
 
   /* ---------------- GAVETA DE FILTROS (celular) ---------------- */
-  function openSheet(){
-    const sidebar = $('sidebar');
-    if(sidebar.classList.contains('open')) return;
-    sidebar.classList.add('open');
-    $('sheetScrim').classList.add('show');
-    $('btnPanel').setAttribute('aria-expanded', 'true');
-    UI.layers.open('sheet', closeSheet);
-    UI.haptic('light');
+  /* gaveta principal (celular): sempre na tela; "peek" (busca + atalhos), "half" ou "full" */
+  let sheet = null;
+  function openSheet(altura){ if(sheet) sheet.set(altura || 'half'); }
+  function closeSheet(){ if(sheet && sheet.get() !== 'peek') sheet.set('peek'); }
+  function onSheetChange(altura){
+    document.body.dataset.sheet = altura;
+    $('btnPanel').setAttribute('aria-expanded', String(altura !== 'peek'));
+    $('sheetScrim').classList.toggle('show', altura === 'full');
+    // gaveta aberta = uma "camada": o botão voltar do celular abaixa a gaveta
+    if(altura !== 'peek') UI.layers.open('sheet', closeSheet); else UI.layers.close('sheet');
   }
-  function closeSheet(){
-    const sidebar = $('sidebar');
-    if(!sidebar.classList.contains('open')) return;
-    sidebar.classList.remove('open');
-    $('sheetScrim').classList.remove('show');
-    $('btnPanel').setAttribute('aria-expanded', 'false');
-    UI.layers.close('sheet');
+  /* rola o painel até uma seção (atalho "período", por exemplo) */
+  function rolarAte(sec){
+    const body = $('panelBody');
+    const y = sec.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 6;
+    body.scrollTo({top: y, behavior: UI.reduceMotion() ? 'auto' : 'smooth'});
   }
 
   /* ---------------- UI WIRING ---------------- */
@@ -1137,6 +1221,13 @@
       $('searchInput').focus();
     });
     $('btnBairroChipClear').addEventListener('click', ()=>{ limparFiltroBairro(); UI.haptic('light'); });
+
+    // tema: chave ao lado da busca (um toque troca)
+    $('btnTheme').addEventListener('click', ()=>{
+      UI.haptic('light');
+      aplicarTema(tema === 'dark' ? 'light' : 'dark');
+    });
+    atualizarControlesTema();
     // sugestões de bairro (componente UI.suggest) — registrado antes do Enter da busca
     const semAcento = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     UI.suggest($('searchInput'), {
@@ -1164,7 +1255,6 @@
     });
     $('btnResetFilters').addEventListener('click', limparFiltros);
     $('btnEmptyReset').addEventListener('click', limparFiltros);
-    $('btnSheetDone').addEventListener('click', closeSheet);
     $('rankList').addEventListener('click', e=>{
       const cel = e.target.closest('.cell[data-bairro]');
       if(cel) abrirBairroDoRanking(cel.dataset.bairro);
@@ -1182,11 +1272,25 @@
     document.addEventListener('visibilitychange', onVisibilidade);
 
     // gaveta de filtros (celular): abre pelo botão, fecha tocando fora, arrastando ou com "voltar"
-    $('btnPanel').addEventListener('click', ()=>{
-      if($('sidebar').classList.contains('open')) closeSheet(); else openSheet();
+    // gaveta principal com alturas (componente UI.detentSheet), presa no TOPO no celular (10/11):
+    // fica a busca à vista e PUXAR PARA BAIXO (pela alça, pela busca ou pela barra) abre o resto
+    sheet = UI.detentSheet($('sidebar'), {
+      edge: 'top',
+      handles: [document.querySelector('.sheet-handle'), $('sheetTop'), document.querySelector('.sheet-nav')],
+      peekUntil: $('sheetTop'),
+      onChange: onSheetChange
     });
+    document.body.dataset.sheet = 'peek';
+    $('btnPanel').addEventListener('click', ()=>{ if(sheet.get() === 'peek') openSheet('half'); else closeSheet(); });
+    $('chipNearMe').addEventListener('click', alternarGeo);
+    $('chipPeriod').addEventListener('click', ()=>{ openSheet('half'); setTimeout(()=>rolarAte($('secPeriodo')), 60); });
     $('sheetScrim').addEventListener('click', closeSheet);
-    UI.draggableSheet($('sidebar'), [document.querySelector('.sheet-handle'), document.querySelector('.sheet-nav')], closeSheet);
+    // rolar o conteúdo com a gaveta pela metade abre a gaveta inteira (como no Apple Maps)
+    $('panelBody').addEventListener('scroll', ()=>{
+      if(UI.isMobile() && sheet.get() === 'half' && $('panelBody').scrollTop > 4) sheet.set('full');
+    }, {passive:true});
+    // tocar na busca abre a gaveta inteira, com espaço para as sugestões e o teclado
+    $('searchInput').addEventListener('focus', ()=>{ if(UI.isMobile()) openSheet('full'); });
     map.on('click', closeSheet);
 
     document.addEventListener('keydown', e=>{
@@ -1194,7 +1298,7 @@
       if(e.key === '/' && !typing){ e.preventDefault(); $('searchInput').focus(); return; }
       if(e.key !== 'Escape') return;
       if(window.Swal && Swal.isVisible()) return;       // o próprio alerta trata o Esc
-      if($('sidebar').classList.contains('open')){ closeSheet(); return; }
+      if(sheet && sheet.get() !== 'peek'){ closeSheet(); return; }
       closeDetail();
     });
 

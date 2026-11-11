@@ -1,18 +1,31 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#070b12">
-<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#ffffff">
+<meta name="color-scheme" content="light">
 <!-- Cara de app instalado (PWA): sem barra do navegador, status bar escura, sem links automáticos de telefone -->
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mapa Seguro">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="Mapa de calor de violência urbana — Projeto Integrador (protótipo acadêmico com dados fictícios).">
 <title>Mapa de Violência Urbana</title>
+<!-- Tema salvo (claro ou escuro) aplicado ANTES de a página aparecer, para não piscar.
+     Padrão: claro. A troca é feita pelo botão sol/lua do mapa ou em "Aparência do mapa". -->
+<script>
+  (function(){
+    var t = 'light';
+    try{ if(localStorage.getItem('tema') === 'dark') t = 'dark'; }catch(e){}
+    document.documentElement.setAttribute('data-theme', t);
+    if(t === 'dark'){
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0b1018');
+      document.querySelector('meta[name="color-scheme"]').setAttribute('content', 'dark');
+    }
+  })();
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icons/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
@@ -37,26 +50,6 @@
     <h1>Mapa de Violência Urbana</h1>
     <p>Cuiabá · dados fictícios</p>
   </div>
-</div>
-
-<!-- Busca: campo de busca de app (lupa, limpar ×). As sugestões são o componente UI.suggest. -->
-<div class="search" role="search" data-suggest-host>
-  <svg class="search-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-  <input type="text" id="searchInput" placeholder="Buscar bairro ou endereço" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" aria-label="Buscar bairro ou endereço">
-  <button type="button" class="search-clear" id="btnClearSearch" aria-label="Limpar busca" hidden>
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 9 6 6M15 9l-6 6"/></svg>
-  </button>
-  <kbd class="search-kbd" aria-hidden="true">/</kbd>
-  <button type="button" class="search-go" id="btnSearch" aria-label="Buscar">Buscar</button>
-</div>
-
-<!-- Filtro de bairro: aparece depois de buscar um bairro. O mapa mostra só as ocorrências dele. -->
-<div class="bairro-chip" id="bairroChip" role="status" aria-live="polite">
-  <svg class="bairro-chip-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/></svg>
-  <span>Só <b id="bairroChipNome"></b></span>
-  <button type="button" class="bairro-chip-x" id="btnBairroChipClear" aria-label="Mostrar todos os bairros" title="Mostrar todos os bairros">
-    Mostrar todos
-  </button>
 </div>
 
 <!-- Ações (canto superior direito) -->
@@ -97,27 +90,73 @@
   <p class="legend-note" id="legendNote">Aproxime o mapa para ver cada ocorrência.</p>
 </div>
 
-<!-- Botão da gaveta de filtros (celular) -->
-<button type="button" class="panel-toggle" id="btnPanel" aria-expanded="false" aria-controls="sidebar">
-  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-  Filtros <span class="count-pill mono sk" id="countPill">0</span>
-</button>
-
-<!-- Fundo escurecido atrás da gaveta de filtros (celular) -->
+<!-- Fundo escurecido quando a gaveta está aberta por inteiro (celular) -->
 <div class="scrim" id="sheetScrim" aria-hidden="true"></div>
 
-<!-- ============ PAINEL DE RESUMO E FILTROS ============
-     Celular: gaveta inferior (bottom sheet) com barra de navegação "Limpar · Filtros · OK".
-     Computador: painel à esquerda que recolhe.
-     Conteúdo em seções agrupadas (componentes .section / .list-group / .cell), como os Ajustes do iPhone. -->
-<aside class="sidebar" id="sidebar" aria-label="Resumo e filtros">
+<!-- ============ GAVETA PRINCIPAL (inspirada no Waze / Apple Maps) ============
+     Celular (10/11): gaveta presa no TOPO, sempre na tela, baixinha, com a busca "Para onde?",
+     a chave do tema e os atalhos; PUXANDO PARA BAIXO (pela alça, pela busca ou pela barra)
+     ela abre até a metade ou quase inteira (componente UI.detentSheet, edge:'top').
+     Computador: painel fixo à esquerda (como o painel do Waze Live Map), com a busca no topo.
+     Conteúdo em seções agrupadas (.section / .list-group / .cell), como os Ajustes do iPhone. -->
+<aside class="sidebar" id="sidebar" aria-label="Busca, resumo e filtros">
   <div class="sheet-handle" aria-hidden="true"></div>
+
+  <div class="sheet-top" id="sheetTop">
+    <!-- Linha da busca: campo + chave do tema (sempre à vista, no celular e no computador) -->
+    <div class="search-row">
+      <!-- Busca: campo de app com lupa e limpar (×). Sugestões: componente UI.suggest. -->
+      <div class="search" role="search" data-suggest-host>
+        <svg class="search-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="searchInput" placeholder="Bairro ou endereço" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" aria-label="Buscar bairro ou endereço">
+        <button type="button" class="search-clear" id="btnClearSearch" aria-label="Limpar busca" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 9 6 6M15 9l-6 6"/></svg>
+        </button>
+        <kbd class="search-kbd" aria-hidden="true">/</kbd>
+        <button type="button" class="search-go" id="btnSearch" aria-label="Buscar" title="Buscar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+      <!-- Chave do tema (como um interruptor): claro = laranja com SOL; escuro = preto com LUA.
+           A bolinha branca desliza para o lado; ligada (à direita) = tema escuro. -->
+      <button type="button" class="theme-switch" id="btnTheme" role="switch" aria-checked="false"
+              aria-label="Tema escuro" title="Mudar para o tema escuro">
+        <span class="ts-track" aria-hidden="true">
+          <span class="ts-bg ts-bg-claro"></span>
+          <span class="ts-bg ts-bg-escuro"></span>
+          <svg class="ts-sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+          <svg class="ts-lua" viewBox="0 0 24 24"><path d="M19.6 14.9A7.9 7.9 0 0 1 9.1 4.4a7.9 7.9 0 1 0 10.5 10.5z"/></svg>
+          <span class="ts-knob"></span>
+        </span>
+      </button>
+    </div>
+    <!-- Filtro de bairro: aparece depois de buscar um bairro. O mapa mostra só as ocorrências dele. -->
+    <div class="bairro-chip" id="bairroChip" role="status" aria-live="polite">
+      <svg class="bairro-chip-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/></svg>
+      <span class="bairro-chip-txt">Só <b id="bairroChipNome"></b></span>
+      <button type="button" class="bairro-chip-x" id="btnBairroChipClear" aria-label="Mostrar todos os bairros">Mostrar todos</button>
+    </div>
+    <!-- Atalhos (celular): como os atalhos "Casa / Trabalho" do Waze -->
+    <div class="quick-chips" role="toolbar" aria-label="Atalhos">
+      <button type="button" class="quick-chip" id="btnPanel" aria-expanded="false" aria-controls="panelBody">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+        Filtros <span class="count-pill mono sk" id="countPill">0</span>
+      </button>
+      <button type="button" class="quick-chip" id="chipNearMe" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.5"/></svg>
+        Perto de mim
+      </button>
+      <button type="button" class="quick-chip" id="chipPeriod">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>
+        <span id="chipPeriodLabel">Todo o período</span>
+      </button>
+    </div>
+  </div>
 
   <header class="nav-bar sheet-nav">
     <button type="button" class="nav-btn" id="btnResetFilters" disabled>Limpar</button>
-    <h2 class="nav-title">Filtros</h2>
+    <h2 class="nav-title">Resumo e filtros</h2>
     <span class="nav-end">
-      <button type="button" class="nav-btn strong only-mobile" id="btnSheetDone">OK</button>
       <button type="button" class="nav-btn icon only-desktop" id="btnCollapse" aria-expanded="true" aria-controls="panelBody" title="Recolher painel">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>
       </button>
@@ -152,7 +191,7 @@
       </div>
     </section>
 
-    <section class="section">
+    <section class="section" id="secPeriodo">
       <h3 class="section-title">Período</h3>
       <div class="segmented" id="presetRow" role="group" aria-label="Período">
         <span class="seg-thumb" aria-hidden="true"></span>
@@ -229,3 +268,4 @@
 <script src="js/app.js"></script>
 </body>
 </html>
+

@@ -6,8 +6,13 @@
 >
 > **Vale para TODAS as telas e partes do sistema**, sem exceção.
 >
-> Versão 1.2 · 02/11/2026 — a área restrita (login + gestão de ocorrências) foi **retirada**
-> do sistema; os componentes criados para ela que servem para outras telas continuam no catálogo.
+> Versão 1.6 · 10/11/2026 — **gaveta da busca presa no topo** no celular (puxar para baixo abre) e
+> **chave do tema** no estilo interruptor (laranja com sol / preto com lua) ao lado da busca.
+> 1.5 · 10/11/2026 — tema escuro opcional, busca por bairro como filtro e mapa sem travar no zoom.
+> 1.4 · 04/11/2026 — **tema claro** (mapa claro, superfícies brancas, destaque azul).
+> 1.3 · 02/11/2026 — layout de app inspirado no Waze (gaveta sempre na tela com a busca
+> "Para onde?", atalhos, botões redondos). Referência: doc "Waze Live Map: UI/UX, bibliotecas e
+> instruções para o PWA". A área restrita (login + gestão) foi retirada na 1.2.
 
 ---
 
@@ -32,14 +37,17 @@ Toda tela nova entra nesta tabela. Uma tela só está "pronta" quando cumpre as 
 |---|---|---|
 | Abertura do app | interface entra escalonada; skeleton do mapa, do cartão de resumo, dos tipos e do ranking | ✅ |
 | Mapa (tela principal) | botões de vidro, alfinetes que "caem", mapa de calor com fade | ✅ |
-| Busca | campo de busca de app com lupa e limpar (×); sugestões próprias (`UI.suggest`); no celular confirma pela tecla "buscar" do teclado, sem botão de site | ✅ |
-| Painel de resumo e filtros | celular: gaveta arrastável com barra **Limpar · Filtros · OK**; computador: painel que recolhe. Cartão de resumo estilo "saldo" de banco; seções agrupadas (`.section` + `.list-group` + `.cell`) | ✅ |
+| Gaveta principal (celular) | **sempre na tela**, como no Waze/Apple Maps: baixinha mostra a busca e os atalhos; arrastando sobe até a metade ou quase inteira (`UI.detentSheet`); voltar abaixa | ✅ |
+| Busca "Para onde?" | dentro da gaveta (celular) ou no topo do painel (computador), como no Waze; lupa, limpar (×), botão redondo com seta no PC; sugestões próprias (`UI.suggest`); no celular, tocar na busca abre a gaveta inteira | ✅ |
+| Atalhos (celular) | chips **Filtros** (com contagem), **Perto de mim** (liga a localização) e **período** (abre a gaveta no período), como os atalhos "Casa/Trabalho" do Waze | ✅ |
+| Botões do mapa | redondos; no celular ficam logo acima da gaveta baixinha e somem quando ela sobe | ✅ |
+| Painel de resumo e filtros | dentro da gaveta (celular) ou painel fixo à esquerda de 340 px que recolhe (computador, como o painel do Waze Live Map). Barra **Limpar · Resumo e filtros**; cartão de resumo estilo "saldo" de banco; seções agrupadas (`.section` + `.list-group` + `.cell`) | ✅ |
 | — Localização | célula com ícone e **interruptor iOS** sincronizado com o botão do mapa | ✅ |
 | — Período | controle segmentado (`UI.segmented`); datas personalizadas em campos `.field` | ✅ |
 | — Tipo de ocorrência | células com ícone, barra, número e marca ✓ ao filtrar | ✅ |
 | — Bairros com mais registros | células com posição, barra, número e seta › | ✅ |
-| Detalhes (bairro, ocorrência, perto de você, endereço) | cabeçalho com ícone, número grande e listas chave → valor; no celular é gaveta com alça (arrastar e "voltar" fecham) | ✅ |
-| Barra de localização | entra deslizando; ações em botões-pílula (`.chip-btn`) | ✅ |
+| Detalhes (bairro, ocorrência, perto de você, endereço) | cabeçalho com ícone, número grande e listas chave → valor; no celular é uma gaveta própria que sobe por cima da principal (arrastar e "voltar" fecham) | ✅ |
+| Barra de localização | no celular fica no topo (como o aviso de viagem do Waze), longe das gavetas; no PC embaixo, no centro; ações em botões-pílula (`.chip-btn`) | ✅ |
 | Estado vazio | ícone, título, explicação e ação "Limpar filtros" | ✅ |
 | Avisos e confirmações | SweetAlert2 nativo via `UI.toast` / `UI.confirm` / `UI.actions` / `UI.alert` | ✅ |
 | ~~Login / Gestão de ocorrências~~ | retirados na versão 1.2 | — |
@@ -74,25 +82,37 @@ Proibido:
 
 ## 3. Tokens (topo de `css/style.css`)
 
-### 3.1 Cores — paleta azul
+### 3.1 Cores — tema claro com destaque azul
+
+Desde a versão 1.4 o app usa **tema claro** (aprovado pelo grupo a partir de um print de referência):
+mapa claro, superfícies brancas, texto quase preto e azul como destaque. É o visual dos apps de
+mapa no celular (Waze, Apple Maps, Google Maps no modo dia).
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--accent` | `#4d8dff` | texto/ícone de destaque, foco, números |
-| `--accent-strong` | `#1f6feb` | botão principal, pílulas, alfinete de busca |
-| `--accent-soft` | `rgba(31,111,235,.18)` | fundo de item selecionado, anel de foco |
-| `--accent-rgb` | `77,141,255` | para `rgba(var(--accent-rgb), x)` |
-| `--bg` / `--surface` / `--surface-2` / `--surface-3` | `#070b12` → `#1b2433` | fundos (neutros levemente azulados) |
-| `--border`, `--hairline` | | bordas e divisórias finas (0.5px estilo iOS) |
-| `--text`, `--text-dim`, `--text-faint` | | hierarquia de texto |
-| `--ios-blue` | `#0a84ff` | botões de texto (Fechar, Cancelar), ação padrão de alerta |
-| `--ios-green` | `#30d158` | interruptor ligado, sucesso |
-| `--danger` | `#ff5a52` | **só** ação destrutiva e erro |
-| `--warn` | `#ffb020` | aviso |
-| `--heat` | vermelho→amarelo | **só** dados do mapa de calor (intensidade) |
+| `--bg` | `#eceff3` | fundo do mapa enquanto carrega |
+| `--surface` / `--surface-2` | `#ffffff` | gaveta, busca, chips, listas, cartões |
+| `--surface-3` / `--hover` | `#f1f3f6` / `#eef1f5` | fundos secundários (botão fechar, toque) |
+| `--skel` | `#e6e9ee` | blocos de skeleton |
+| `--border`, `--hairline` | `#dde1e7`, `rgba(15,23,42,.10)` | bordas dos campos/chips e divisórias finas |
+| `--text`, `--text-dim`, `--text-faint` | `#0f1729`, `#5b6575`, `#8b94a3` | hierarquia de texto |
+| `--ink` | `#111827` | botão escuro de destaque (localização) |
+| `--accent` / `--accent-strong` | `#1f6feb` / `#1a62d6` | destaque: contagens, foco, botão de busca, pílulas |
+| `--accent-soft` | `rgba(31,111,235,.12)` | fundo de item ativo (chip ligado, seleção) |
+| `--accent-rgb` | `31,111,235` | para `rgba(var(--accent-rgb), x)` |
+| `--ios-blue` | `#007aff` | botões de texto (Cancelar, Limpar), ação padrão de alerta |
+| `--ios-green` | `#34c759` | interruptor ligado, sucesso |
+| `--danger` | `#e5372e` | **só** ação destrutiva e erro |
+| `--warn` | `#c77800` | aviso (escuro o bastante para ler no branco) |
+| `--heat` | rosa → vermelho → laranja → amarelo | **só** dados do mapa de calor (`#ffb3ba → #ef4444 → #f97316 → #facc15`, mesmas cores do `HeatLayer`) |
+| `--shadow` | sombra suave azul-acinzentada | superfícies flutuantes (nunca sombra preta forte no tema claro) |
+
+Mapa base: OpenFreeMap **positron** (claro); reserva sem WebGL: CARTO **light_all**.
+Barra do celular: `theme-color` `#ffffff` e status bar `default` (ícones escuros).
 
 Exceções intencionais: o mapa de calor continua quente (azul passaria a ideia de "área
-tranquila") e ações destrutivas continuam vermelhas.
+tranquila") e ações destrutivas continuam vermelhas. O cartão de resumo é o único bloco azul
+cheio, com texto branco (como o cartão de saldo dos apps de banco).
 
 ### 3.2 Movimento
 
@@ -131,8 +151,9 @@ tranquila") e ações destrutivas continuam vermelhas.
 | `UI.countTo(el, n)` | número que "corre" até o valor | cartão de resumo, contagens |
 | `UI.stagger(lista)` | itens de uma lista entram em sequência | tipos e ranking após carregar |
 | `UI.shake(el)` / `UI.haptic(tipo)` | balança (erro) / vibração curta | busca vazia |
-| `UI.layers.open(id, fechar)` / `.close(id)` / `.swap(a, b, fechar)` | botão **voltar** do celular fecha a tela aberta | gaveta de filtros, detalhes |
-| `UI.draggableSheet(el, alcas, fechar, classeAberta)` | gaveta que fecha arrastando para baixo | gaveta (`'open'`), detalhes (`'show'`) |
+| `UI.layers.open(id, fechar)` / `.close(id)` / `.swap(a, b, fechar)` | botão **voltar** do celular fecha a camada de cima (uma só entrada no histórico; abrir e fechar no mesmo instante não bagunça o "voltar") | gaveta, detalhes |
+| `UI.detentSheet(el, {handles, peekUntil, onChange})` | **gaveta sempre na tela com 3 alturas** (`peek` → `half` → `full`): arrasta, solta com velocidade, encaixa na altura mais próxima; publica `--sheet-peek` no CSS; devolve `{set(altura), get(), refresh()}` | gaveta principal |
+| `UI.draggableSheet(el, alcas, fechar, classeAberta)` | gaveta que fecha arrastando para baixo | detalhes (`'show'`) |
 | `UI.isMobile()`, `UI.reduceMotion()`, `UI.wait(ms)`, `UI.esc(txt)` | utilidades | `esc` sempre que inserir texto do usuário em HTML |
 
 ### 4.2 Componentes visuais (classes do CSS)
@@ -153,8 +174,10 @@ tranquila") e ações destrutivas continuam vermelhas.
 | `.field` (`.static`, `.compact`, `.textarea`, `.has-action`, `.invalid`) | campo com **rótulo flutuante**, em todo formulário | Inter |
 | `.btn-cta` (`.loading`, `.success`) | botão principal grande (56px) | Inter/Bradesco |
 | `.chip-btn` (`.blue`, `.red`) | botão-pílula para ações curtas | Apple Maps |
-| `.fab` | botão redondo flutuante de vidro | Apple Maps |
-| `.sidebar` + `.sheet-handle` + `.scrim` | gaveta inferior (bottom sheet) no celular | Apple Maps |
+| `.fab` / `.zoom-group` | botão redondo flutuante de vidro / zoom em pílula | Waze / Apple Maps |
+| `.sidebar` + `.sheet-handle` + `.sheet-top` + `.scrim` | gaveta principal (com `UI.detentSheet`) no celular; painel fixo no PC | Waze / Apple Maps |
+| `.search` + `.search-ico` + `.search-clear` + `.search-go` | campo de busca de app ("Para onde?") | Waze |
+| `.quick-chips` + `.quick-chip` (`aria-pressed` / `aria-expanded` = ativo) | fila de atalhos roláveis | atalhos do Waze |
 | `.detail-panel` + `.sheet-grabber` + `.detail-head` + `.detail-kpi` + `.detail-note` | cartão/gaveta de detalhes | Apple Maps |
 | `.modal-backdrop` + `.modal` + `.modal-grabber` + `.modal-body` | **page sheet** para telas futuras: cartão no PC, sobe de baixo no celular | iOS |
 | `.empty-state` | estado vazio com ícone, título e ação | |
@@ -402,7 +425,92 @@ O aviso feito à mão virou `UI.toast()` (notificação do topo); confirmações
 - **Barra de localização:** botões de site (`.btn small`) viraram botões-pílula (`.chip-btn`).
 - **Estado vazio:** de uma frase solta para cartão com ícone, título, explicação e "Limpar filtros".
 
-### 12.6 Revisões anteriores
+### 12.6 Cara de app inspirada no Waze (revisão 1.3)
+
+Base: o doc "Waze Live Map: UI/UX, bibliotecas e instruções para o PWA" (painel fixo de ~300 px
+no computador; no celular, busca compacta e cartões perto do polegar; botões redondos à direita).
+
+**Antes:** barra de busca flutuando no topo como em site, botão "Filtros" solto embaixo, gaveta que
+só aparecia ao tocar no botão, botões quadrados.
+
+**Depois (celular):**
+```
+┌────────────────────────────┐
+│ [● 20 registros · Quilombo] (⟳) │  ← barra de localização no topo
+│                            │
+│          mapa              │
+│                       (◎)  │  ← botões redondos, logo acima da gaveta
+│ ╭──────── ▬ ─────────────╮ │
+│ │ 🔍 Para onde? Bairro…   │ │  ← gaveta SEMPRE na tela (peek)
+│ │ [Filtros 201][Perto de mim][Todo o período] │
+╰─┴──────────────────────────┘
+   arrasta ↑ meia altura → resumo e filtros · arrasta ↑ inteira · voltar ↓
+```
+```js
+sheet = UI.detentSheet($('sidebar'), {
+  handles: [alca, $('sheetTop'), barra], peekUntil: $('sheetTop'), onChange: onSheetChange
+});
+$('searchInput').addEventListener('focus', () => openSheet('full'));   // busca abre inteira
+```
+**Depois (computador):** busca no topo do painel fixo à esquerda (340 px), como o painel do Waze
+Live Map, com botão redondo de seta; a busca flutuante do centro saiu.
+
+**Próximos passos sugeridos pelo doc do Waze (ainda não feitos):** origem/destino empilhados com
+até 3 rotas e selo "MAIS SEGURA" (OpenRouteService + Turf.js), botão "Reportar", convite de
+instalação do PWA e service worker. Todos devem seguir este guia.
+
+### 12.7 Tema claro (revisão 1.4)
+
+**Antes:** tema escuro (fundos `#070b12`, mapa `dark`). **Depois:** o print de referência do grupo:
+mapa claro (positron), gaveta e busca brancas com borda fina, chips brancos com ícone escuro,
+contagem em pílula azul, botão de atualizar branco e redondo, botão de localização escuro
+(`--ink`), etiquetas de bairro cinza-claro com número azul, alertas do SweetAlert2 no estilo
+claro do iOS. Só os tokens mudaram (mais o estilo do mapa e o degradê do mapa de calor);
+componentes e layout continuam os mesmos.
+
+```css
+/* antes */  --bg:#070b12; --surface:#0f1520; --text:#eef3fb; --accent:#4d8dff;
+/* depois */ --bg:#eceff3; --surface:#ffffff; --text:#0f1729; --accent:#1f6feb; --ink:#111827;
+```
+
+### 12.8 Tema escuro opcional, filtro de bairro e desempenho (revisão 1.5)
+
+**Tema.** O claro continua sendo o padrão. O escuro é opcional e sai **só de tokens**:
+o bloco `html[data-theme="dark"]` no fim de `css/style.css` redefine as mesmas variáveis
+(`--bg`, `--surface`, `--text`, `--accent`, `--ink`, `--heat`...). Regra para telas novas:
+**use sempre os tokens**; se precisar de uma cor fixa de tema claro, acrescente a versão
+escura no mesmo bloco. O que o CSS não alcança (mapa base, cores do mapa de calor e do
+ponto azul) fica em `TEMAS` no `js/app.js`.
+
+- **Onde trocar (revisão 1.6):** a **chave** `.theme-switch` ao lado da busca, sempre à vista.
+  Claro = trilho laranja (`#ff5a0a`) com sol branco; escuro = trilho preto com lua branca;
+  bolinha branca que desliza. `role="switch"`, nome "Tema escuro", ligado = escuro. Os dois
+  fundos ficam empilhados e trocam por opacidade (só transform/opacity, item 5).
+- **Sem piscar:** a escolha fica salva no aparelho (`localStorage` "tema") e um script no
+  `<head>` aplica o tema antes de a página aparecer.
+- **Mobile first:** os estilos novos são escritos para o celular (alvos de toque de 44 px) e
+  só ajustados para o computador com `@media (min-width: 821px)`.
+
+**Filtro de bairro.** Buscar um bairro mostra só as ocorrências dele; o aviso
+"Só [bairro] · Mostrar todos" (`.bairro-chip`) fica na gaveta, logo abaixo da busca.
+
+**Desempenho.** Nada de `filter: drop-shadow` em elementos que se repetem no mapa (a sombra vai
+no SVG); camadas com muitos itens são montadas uma vez e só ligadas/desligadas no zoom; o
+vidro (`backdrop-filter`) pausa enquanto o mapa se move (`body.map-moving`).
+
+### 12.10 Gaveta da busca no topo (revisão 1.6)
+
+**Antes:** gaveta principal embaixo, subindo. **Depois:** no celular ela fica **presa no topo**
+(`UI.detentSheet` com `edge:'top'`): baixinha mostra busca + chave do tema + atalhos; **puxar
+para baixo** abre até a metade ou quase inteira; a **alça** fica embaixo dela, em toda a largura
+(área de toque grande, acima da barra sticky "Resumo e filtros"). No modo topo a gaveta muda de
+**altura** (com `contain: layout paint`) em vez de deslizar, para a busca ficar sempre no topo e
+o conteúdo rolar certo. "Atualizar" desceu para o canto de baixo, acima da localização; a barra
+da localização e os toasts aparecem logo abaixo da gaveta (`--sheet-peek`). Os detalhes
+continuam numa gaveta própria que sobe de baixo. Telas novas no celular: **nada fixo no topo
+do mapa**, que agora é da gaveta da busca.
+
+### 12.9 Revisões anteriores
 
 - **1.1** — gestão de ocorrências em lista de células, menu de ações, formulário empurrado;
   busca com sugestões; detalhes arrastáveis. (A gestão foi retirada na 1.2, mas `UI.actions`,
@@ -418,4 +526,8 @@ O aviso feito à mão virou `UI.toast()` (notificação do topo); confirmações
 |---|---|---|
 | 1.0 | 02/11/2026 | Orientações do mentor (animações, skeleton, SweetAlert2 nativo, telas de app, animações suaves, foco mobile) + paleta azul |
 | 1.1 | 02/11/2026 | Regra explicitamente para todas as telas; inventário de telas; gestão refeita; busca com sugestões; detalhes arrastáveis; `UI.actions`, `UI.segmented`, `UI.suggest`, `.list`/`.cell` |
+| 1.6 | 10/11/2026 | **Gaveta da busca presa no topo** no celular (`UI.detentSheet` `edge:'top'`, puxar para baixo abre, alça embaixo); **chave do tema** estilo interruptor ao lado da busca (laranja/sol, preto/lua, `role="switch"`); "Atualizar" no canto de baixo; barra da localização e toasts abaixo da gaveta; seção "Aparência do mapa" e botão redondo do tema retirados |
+| 1.5 | 10/11/2026 | **Tema escuro opcional** (tokens em `html[data-theme="dark"]`, botão sol/lua no mapa, "Claro \| Escuro" na gaveta, salvo no aparelho, sem piscar); aviso de filtro de bairro (`.bairro-chip`); regras de desempenho do mapa |
+| 1.4 | 04/11/2026 | **Tema claro** a partir do print do grupo: tokens claros, `--ink` e `--skel` novos, mapa positron / CARTO light_all, mapa de calor rosa→amarelo mais suave, alertas claros do iOS, cartão de resumo azul cheio, botão de localização escuro |
+| 1.3 | 02/11/2026 | Layout de app inspirado no Waze: gaveta principal sempre na tela com 3 alturas (`UI.detentSheet`), busca "Para onde?" dentro da gaveta/painel, atalhos (`.quick-chip`), botões redondos, barra de localização no topo no celular, detalhes como gaveta própria, painel de 340 px no PC; `UI.layers` sem corrida no histórico |
 | 1.2 | 02/11/2026 | **Área restrita (login + gestão) retirada.** Painel de resumo/filtros, detalhes, busca, barra de localização e estado vazio refeitos no padrão: `.nav-bar` com Limpar/OK, `.kpi-card`, `.section`, `.cell.kv`, `.switch-cell`, `.type-row` com ✓, `.chip-btn`, `.empty-state`, `.field.compact`, page sheet genérico para telas futuras |

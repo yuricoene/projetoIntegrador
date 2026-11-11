@@ -41,12 +41,15 @@ Toda tela ou componente novo segue estas 5 regras. Elas estão aplicadas em **to
 
 ### Paleta de cores
 
-Identidade em **azul** (competência, calma, confiança; cor de tecnologia, ciência e governo).
-Tudo sai dos tokens no topo de `css/style.css`: `--accent` (#4d8dff), `--accent-strong` (#1f6feb),
-`--accent-soft` e os neutros levemente azulados (`--bg`, `--surface*`, `--border`, `--text*`).
-Nunca escreva cor solta no CSS; use os tokens. Duas exceções de propósito:
-o **mapa de calor** continua em vermelho/amarelo (ele representa intensidade de ocorrências,
-e azul passaria a ideia de "tranquilo"), e ações destrutivas/erros continuam em vermelho (`--danger`).
+**Tema claro** com destaque **azul** (competência, calma, confiança): mapa claro, superfícies
+brancas, texto quase preto (`--text` #0f1729), destaque `--accent` (#1f6feb) e botão de
+localização escuro (`--ink` #111827). Tudo sai dos tokens no topo de `css/style.css`; nunca
+escreva cor solta no CSS. Duas exceções de propósito: o **mapa de calor** continua quente
+(rosa → amarelo, porque representa intensidade de ocorrências) e ações destrutivas/erros
+continuam em vermelho (`--danger`). Tabela completa: seção 3.1 do guia.
+
+**Tema escuro (opcional, 10/11):** os mesmos tokens redefinidos em `html[data-theme="dark"]`,
+no fim de `css/style.css`. Ver "Tema claro e escuro" abaixo e a seção 12.8 do guia.
 
 ### Componentes disponíveis (`js/ui.js`)
 
@@ -73,84 +76,127 @@ UI.draggableSheet(gaveta, [alca], fechar);           // arrastar para baixo fech
 
 ### Telas no padrão de app
 
-- **Painel de resumo e filtros:** no celular é uma gaveta que sobe de baixo (arrasta para fechar,
-  botão voltar fecha) com barra **Limpar · Filtros · OK**; no computador é o painel à esquerda,
-  que recolhe. Cartão de resumo no estilo "saldo" dos apps de banco e seções agrupadas:
+- **Gaveta principal (inspirada no Waze):** no celular fica sempre na tela, baixinha, com a busca
+  "Para onde?" e os atalhos **Filtros · Perto de mim · período**; arrastando a alça sobe até a
+  metade ou quase inteira (botão voltar abaixa). Botões do mapa redondos, logo acima dela.
+  No computador vira o painel fixo à esquerda, com a busca no topo, como no Waze Live Map.
+- **Painel de resumo e filtros:** barra **Limpar · Resumo e filtros**. Cartão de resumo no estilo "saldo" dos apps de banco e seções agrupadas:
   localização (interruptor), período (controle segmentado + datas), tipos (células com ✓) e ranking.
 - **Detalhes:** cabeçalho com ícone, número grande e listas chave → valor; gaveta com alça no celular.
-- **Busca:** campo com limpar (×) e sugestões próprias; no celular confirma pela tecla do teclado.
+- **Busca:** campo com limpar (×) e sugestões próprias; no celular, tocar na busca abre a gaveta inteira
+  e a confirmação é pela tecla do teclado.
+- **Barra de localização:** no celular fica no topo da tela; no computador, embaixo no centro.
 - **Estado vazio:** cartão com ícone, explicação e "Limpar filtros".
 
 A área restrita (login + gestão de ocorrências) foi retirada em 02/11/2026.
 
 ## Funcionalidades
 
-- Mapa de calor em tela cheia sobre o **mapa vetorial escuro do OpenStreetMap**
-  (estilo `dark` do OpenFreeMap, gratuito e sem chave). Ele é desenhado com o MapLibre GL
+- Mapa de calor em tela cheia sobre o **mapa vetorial claro do OpenStreetMap**
+  (estilo claro `positron` do OpenFreeMap, gratuito e sem chave). Ele é desenhado com o MapLibre GL
   dentro do Leaflet, pelo plugin `@maplibre/maplibre-gl-leaflet`. Se o navegador não
-  tiver WebGL, o site usa automaticamente os tiles raster escuros do CARTO.
+  tiver WebGL, o site usa automaticamente os tiles raster claros do CARTO.
 - **Busca de endereço** pela API Nominatim do OpenStreetMap (ex.: "Av. Getúlio Vargas 500").
   Se o texto for um bairro da lista, a busca usa o bairro; senão, consulta o Nominatim,
   limitado a Cuiabá e Várzea Grande. Atalho: tecla `/` foca a busca.
 - Ícones por tipo, todos no mesmo estilo (selo com degradê, contorno branco e brilho):
   Furto, Roubo, Agressão, Vandalismo, Ameaça. No mapa viram alfinetes com ponta, como no
   Waze. Os desenhos ficam em `ICON_GLYPH` e as cores em `ICON_THEME`, em `js/app.js`.
+- **Tema claro (sol) ou escuro (lua)**, à escolha da pessoa (ver seção abaixo).
 - **Busca por bairro como filtro**: buscar um bairro faz o mapa mostrar só as ocorrências dele
   (ver seção abaixo). Filtros por período (controle segmentado com pílula deslizante) e por tipo
 - **Geolocalização em tempo real**: o botão de localização no canto inferior direito liga e
   desliga o acompanhamento (ponto azul, anel de 1 km, contador, bairro mais próximo,
   Recentralizar, pausa em segundo plano, avisos de sinal fraco/permissão/fora da área).
   A posição fica só em memória: nunca é salva nem enviada (regras RN-G1 a RN-G8, ver `js/app.js`).
-- Layout: mapa em tela cheia, busca centralizada no topo, painel de resumo e filtros à esquerda
+- Layout: mapa em tela cheia; no computador, painel à esquerda com a busca no topo
   (recolhe com animação), legenda no canto inferior esquerdo e zoom + localização no canto
-  inferior direito. No celular, os filtros viram uma gaveta inferior arrastável.
+  inferior direito. **No celular (10/11), a gaveta principal fica presa no TOPO**: busca, chave
+  do tema e atalhos sempre à vista; **puxando para baixo** ela abre até a metade ou quase
+  inteira, com resumo e filtros (ver "Gaveta da busca no topo" abaixo).
 - Resumo ao vivo (RF12): contagem por tipo e os 5 bairros com mais registros.
 
-### Busca por bairro como filtro (09/11)
+### Tema claro e escuro (10/11)
 
-Ao buscar um bairro (pela sugestão, Enter ou botão "Buscar"), o mapa passa a mostrar
-**só as ocorrências desse bairro**: mapa de calor, alfinetes, rótulo, total, contagem por
-tipo e ranking. Os filtros de período e tipo continuam valendo junto com o bairro.
+O **claro** continua sendo o padrão aprovado pelo grupo; o **escuro** é opcional (cansa menos
+a vista à noite, que é quando a persona mais usa o mapa). Pensado primeiro para o celular:
 
-- Embaixo da busca aparece o aviso **Só [bairro] · Mostrar todos**. O total do painel
+- **Chave (interruptor) ao lado da busca**, sempre à vista no celular e no computador, no
+  estilo da referência do grupo: **claro = trilho laranja com sol branco**; **escuro = trilho
+  preto com lua branca**; a **bolinha branca desliza** para o lado ao trocar. Um toque troca.
+  Área de toque de 66×50 px. Para leitores de tela é um interruptor (`role="switch"`) chamado
+  "Tema escuro": ligado (bolinha à direita) = escuro. Funciona também pelo teclado (espaço).
+- Muda tudo junto: interface (tokens do CSS), **mapa base** (OpenFreeMap `positron` ↔ `dark`;
+  na reserva, CARTO `light_all` ↔ `dark_all`), **cores do mapa de calor** e da legenda, **ponto
+  azul** da localização e a cor da barra do navegador no celular.
+- A escolha fica **salva no aparelho** (`localStorage`, chave `tema`). Um script no `<head>` do
+  `index.html` aplica o tema antes de a página aparecer, então quem escolheu escuro não vê a
+  tela piscar em branco ao abrir.
+- No código: `TEMAS`, `aplicarTema()`, `atualizarControlesTema()` e `trocarMapaBase()` em
+  `js/app.js`; a chave é `.theme-switch` no `css/style.css` (só anima transform e opacity); tokens escuros em
+  `html[data-theme="dark"]` no fim de `css/style.css`. Para o app seguir o tema do celular
+  quando a pessoa ainda não escolheu, troque a primeira linha do script do `<head>` por
+  `var t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';`.
+
+### Gaveta da busca no topo (celular, 10/11)
+
+No celular a gaveta principal saiu de baixo e ficou **presa no topo da tela**, como uma
+barra de pesquisa de app:
+
+- **Fechada (baixinha):** busca, chave do tema, aviso do filtro de bairro (quando houver) e os
+  atalhos **Filtros · Perto de mim · Período**. Embaixo dela fica a **alça**, em toda a largura.
+- **Para ver mais opções, puxe para baixo** (pela alça, pela área da busca ou pela barra
+  "Resumo e filtros"): ela para na **metade** ou **quase inteira**, com o resumo, a localização,
+  o período, os tipos e o ranking. Soltar com velocidade vai para a próxima altura na direção do
+  gesto. **Puxar para cima** fecha. O atalho "Filtros", o "Período" e o botão voltar do celular
+  continuam funcionando.
+- Tocar na busca abre a gaveta inteira, com espaço para as sugestões e o teclado.
+- O que ficava no topo do mapa desceu para perto do polegar: **Atualizar** fica no canto de
+  baixo, logo acima da **localização**. A **barra da localização** e os **avisos** (toasts)
+  aparecem logo abaixo da gaveta.
+- No código: `UI.detentSheet(..., {edge:'top'})` em `js/ui.js` (no modo topo a gaveta muda de
+  altura em vez de deslizar, então a busca fica sempre no topo e o conteúdo rola certo em
+  qualquer altura) e o bloco `@media (max-width: 820px)` do `css/style.css`.
+- No computador nada mudou: painel à esquerda, com a busca e a chave do tema no topo.
+
+### Busca por bairro como filtro (10/11)
+
+Ao buscar um bairro, o mapa passa a mostrar **só as ocorrências desse bairro**: mapa de calor,
+alfinetes, rótulo, total, contagem por tipo e ranking. Período e tipo continuam valendo junto.
+
+- Abaixo da busca (na gaveta do topo, no celular) aparece **Só [bairro] · Mostrar todos**. O total do painel
   também mostra o bairro (ex.: "Todo o período · Coxipó").
-- Voltam a aparecer todos os bairros com: **Mostrar todos**, o **×** do campo de busca,
-  apagar o texto, o **Limpar** da gaveta de filtros ou o **Limpar filtros** do estado vazio.
-- Buscar um **endereço** (Nominatim) tira o filtro de bairro, porque o resumo "Perto deste
-  endereço" conta o que há em volta, de qualquer bairro.
-- Ligar a **localização em tempo real** também tira o filtro, para mostrar tudo ao redor
-  da pessoa. Com a localização ligada, buscar um bairro filtra normalmente e o contador
-  de 1 km respeita esse filtro (RN-G7).
-- As sugestões da busca continuam mostrando quantos registros tem cada bairro, mesmo com
-  um bairro filtrado.
-- No código: variável `bairroFiltro`, funções `doSearch()`, `limparFiltroBairro()` e
-  `applyFilters()` em `js/app.js`.
+- Voltam todos os bairros com: **Mostrar todos**, o **×** da busca, apagar o texto, o
+  **Limpar** do painel ou o **Limpar filtros** do estado vazio.
+- Buscar um **endereço** ou ligar a **localização em tempo real** tira o filtro, porque
+  nesses casos importa o que há em volta, de qualquer bairro. Com a localização ligada,
+  buscar um bairro filtra normalmente e o contador de 1 km respeita o filtro (RN-G7).
+- As sugestões da busca continuam mostrando quantos registros tem cada bairro.
+- No código: `bairroFiltro`, `doSearch()`, `limparFiltroBairro()` e `applyFilters()`.
 
-### Desempenho do mapa: zoom e arraste (09/11)
+### Desempenho do mapa: zoom e arraste (10/11)
 
-O site travava ao dar zoom. Causas e correções:
-
-| Causa | Correção |
+| Causa do travamento | Correção |
 |---|---|
-| A cada zoom, todos os alfinetes (cerca de 200 SVGs) eram apagados e recriados | Os alfinetes são montados só quando os dados ou os filtros mudam. No zoom, a camada só entra ou sai do mapa ao cruzar o zoom 14 (`ZOOM_PONTOS`, `atualizarVisibilidadePontos()`) |
-| `filter: drop-shadow` em cada alfinete, refeito a cada quadro do zoom | A sombra agora é desenhada dentro do próprio SVG (`pinHtml()`), com o mesmo visual |
-| O mapa de calor era redesenhado 2 vezes por zoom (`zoomend` e `moveend`) | Redesenha uma vez por quadro, só quando o movimento termina (`requestAnimationFrame`) |
-| Durante a animação do zoom a mancha de calor ficava parada e "pulava" no fim | O canvas acompanha a animação esticando a imagem pronta (`zoomanim`), sem redesenhar |
-| Cada redesenho do calor criava um canvas novo e lia a tela inteira | Reaproveita o canvas e lê só o retângulo onde há pontos |
-| Os painéis de vidro (`backdrop-filter: blur`) desfocavam o mapa a cada quadro | Enquanto o mapa se move, o desfoque é pausado (classe `map-moving` no `<body>`); volta quando o mapa para |
-| No mapa reserva (CARTO), quadros baixados a cada passo do zoom | `updateWhenZooming: false` e `keepBuffer: 4` |
+| A cada zoom, todos os alfinetes (cerca de 200 SVGs) eram apagados e recriados | Montados só quando dados ou filtros mudam; no zoom a camada só entra ou sai ao cruzar o zoom 14 (`ZOOM_PONTOS`, `atualizarVisibilidadePontos()`) |
+| `filter: drop-shadow` em cada alfinete, refeito a cada quadro | A sombra é desenhada no próprio SVG (`pinHtml()`), com o mesmo visual |
+| Mapa de calor redesenhado 2 vezes por zoom | Uma vez por quadro, só quando o movimento termina (`requestAnimationFrame`) |
+| A mancha de calor ficava parada no zoom e "pulava" no fim | O canvas acompanha a animação esticando a imagem pronta (`zoomanim`) |
+| Cada redesenho criava um canvas novo e lia a tela inteira | Reaproveita o canvas e lê só o retângulo com pontos |
+| Painéis de vidro desfocavam o mapa a cada quadro | O desfoque pausa enquanto o mapa se move (`body.map-moving`) |
+| Mapa reserva baixava quadros a cada passo do zoom | `updateWhenZooming: false` e `keepBuffer: 4` |
 
-Medição com o processador 4 vezes mais lento (simulando um celular intermediário), 8 zooms
-seguidos no zoom 14: **antes**, 29 travadas acima de 50 ms (3,6 s no total, pior quadro de
-440 ms); **depois**, nenhuma (pior quadro de 39 ms).
+Na versão anterior do projeto, com o processador 4 vezes mais lento (simulando um celular
+intermediário), 8 zooms seguidos davam 29 travadas acima de 50 ms (pior quadro de 440 ms);
+com estas correções, nenhuma (pior quadro de 39 ms).
 
 ## APIs e bibliotecas externas
 
 | Serviço | Para quê | Chave? |
 |---|---|---|
-| OpenFreeMap (`tiles.openfreemap.org/styles/dark`) | mapa base, dados OSM | não |
+| OpenFreeMap (`tiles.openfreemap.org/styles/positron` e `/dark`) | mapa base claro e escuro, dados OSM | não |
 | Nominatim (`nominatim.openstreetmap.org/search`) | busca de endereço | não |
-| CARTO `dark_all` | mapa reserva (sem WebGL) | não |
+| CARTO `light_all` | mapa reserva (sem WebGL) | não |
 | SweetAlert2 11 (jsDelivr) | alertas, confirmações e toasts | não |
 
 Se o SweetAlert2 não carregar (sem internet), os avisos continuam aparecendo num aviso
@@ -186,9 +232,12 @@ npx playwright install chromium
 npm test
 ```
 
-São 79 testes: os 50 da geolocalização (todos continuam passando), 18 da busca por bairro
-como filtro e 11 do desempenho do zoom (alfinetes não recriados, nenhuma travada acima de
-100 ms em zooms seguidos, alfinetes sem `drop-shadow`).
+São 145 testes, todos passando: os 50 da geolocalização, 18 da busca por bairro como filtro,
+11 do desempenho do zoom, 18 da chave do tema no computador e 48 do celular (24 em cada:
+iPhone 14 e um Android pequeno simulados). Os do celular conferem a gaveta no topo **com gesto
+de toque de verdade** (puxar para baixo abre, para cima fecha), a alça à vista, a chave do tema
+na linha da busca com 44 px ou mais, os botões de baixo, a barra da localização logo abaixo da
+gaveta e o aviso do filtro de bairro.
 
 ## Aviso importante
 

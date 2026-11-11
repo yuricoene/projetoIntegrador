@@ -8,7 +8,7 @@
      3.   menus nativos       → actions() (action sheet / alerta empilhado)
      4.   nada com cara de web → back do Android fecha telas (layers),
           vibração (haptic), gaveta arrastável, controle segmentado,
-          sugestões de busca próprias (suggest)
+          sugestões de busca próprias (suggest), gaveta com alturas (detentSheet)
    Vale para TODAS as telas. Guia completo: docs/GUIA-INTERFACE-MOBILE.md
    Regra do grupo: a tela (app.js) nunca chama Swal, alert()
    ou confirm() direto; sempre passa por UI.*. Assim todo
@@ -224,31 +224,41 @@
   /* ---------- Botão "voltar" do celular fecha a tela aberta ----------
      Em app nativo, o voltar do Android fecha a gaveta/tela aberta em vez de sair do app.
      Cada tela aberta empilha uma entrada no histórico.                          */
+  // Uma única entrada no histórico representa "há camadas abertas". Abrir e fechar no
+  // mesmo instante (ex.: abaixar a gaveta e abrir os detalhes) não mexe no histórico:
+  // a sincronização roda no fim da tarefa e só age se o estado final mudou.
   const stack = [];
-  let ignorePop = 0;
+  let pushed = false, ignorePop = 0, syncTimer = null;
+  function sync(){
+    syncTimer = null;
+    const quer = stack.length > 0;
+    try{
+      if(quer && !pushed){ history.pushState({naLayer:true}, ''); pushed = true; }
+      else if(!quer && pushed){ pushed = false; ignorePop++; history.back(); }
+    }catch(e){}
+  }
+  const agendar = () => { if(!syncTimer) syncTimer = setTimeout(sync, 0); };
   function openLayer(id, onClose){
     if(stack.some(l => l.id === id)) return;
     stack.push({id, onClose});
-    try{ history.pushState({naLayer:id}, ''); }catch(e){}
+    agendar();
   }
   function closeLayer(id){
-    const top = stack[stack.length - 1];
-    if(!top || top.id !== id) return;
-    stack.pop();
-    ignorePop++;
-    try{ history.back(); }catch(e){ ignorePop--; }
+    const i = stack.findIndex(l => l.id === id);
+    if(i < 0) return;
+    stack.splice(i, 1);
+    agendar();
   }
   function swapLayer(oldId, newId, onClose){
-    const top = stack[stack.length - 1];
-    if(top && top.id === oldId){
-      top.id = newId; top.onClose = onClose;
-      try{ history.replaceState({naLayer:newId}, ''); }catch(e){}
-    } else openLayer(newId, onClose);
+    const l = stack.find(x => x.id === oldId);
+    if(l){ l.id = newId; l.onClose = onClose; } else openLayer(newId, onClose);
   }
   window.addEventListener('popstate', () => {
     if(ignorePop > 0){ ignorePop--; return; }
-    const top = stack.pop();
+    pushed = false;
+    const top = stack.pop();                 // o voltar fecha só a camada de cima
     if(top) top.onClose();
+    if(stack.length) agendar();              // ainda há camadas: volta a guardar uma entrada
   });
 
   /* ---------- Gaveta arrastável (bottom sheet) ----------
@@ -392,6 +402,121 @@
     return {hide, refresh: render};
   }
 
+
+  /* ---------- Gaveta com alturas fixas (bottom sheet com "detents") ----------
+     Igual ao Apple Maps / Waze: a gaveta fica sempre na tela, baixinha ("peek"),
+     e sobe até a metade ("half") ou quase inteira ("full") arrastando a alça.
+     Solta com velocidade: vai para a próxima altura na direção do gesto.
+     UI.detentSheet(el, {handles, peekUntil, onChange, edge, handleSize}) → {set(nome), get(), refresh()}
+     - peekUntil: elemento cujo fim marca a altura "peek" (ex.: busca + atalhos)
+     - edge: 'bottom' (padrão, sobe de baixo) ou 'top' (10/11: presa no topo, abre PUXANDO
+       PARA BAIXO). No modo 'top' a gaveta muda de altura em vez de deslizar, assim a busca
+       fica sempre no topo e o conteúdo rola certo em qualquer altura.
+     - handleSize: no modo 'top', altura da faixa da alça embaixo da gaveta (padrão 24)
+     - só age no celular; no computador a gaveta vira painel e o transform/altura é limpo */
+  const safeProbe = (() => {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;visibility:hidden;pointer-events:none;';
+    (document.body || document.documentElement).appendChild(d);
+    return d;
+  })();
+  function detentSheet(el, opts){
+    opts = opts || {};
+    const ORDER = ['peek', 'half', 'full'];
+    let atual = 'peek', arrastando = false;
+    const topo = opts.edge === 'top';
+    const alca = opts.handleSize || 24;
+    const visivel = topo ? {
+      // presa no topo: até o fim da busca/atalhos + a faixa da alça (offsetTop já inclui a área do notch)
+      peek: () => (opts.peekUntil ? opts.peekUntil.offsetTop + opts.peekUntil.offsetHeight : 120) + alca,
+      half: () => Math.round(window.innerHeight * 0.55),
+      full: () => Math.round(window.innerHeight * 0.88)
+    } : {
+      peek: () => (opts.peekUntil ? opts.peekUntil.offsetTop + opts.peekUntil.offsetHeight + 14 : 140) + safeProbe.offsetHeight,
+      half: () => Math.round(window.innerHeight * 0.52),
+      full: () => el.offsetHeight
+    };
+    const offset = nome => Math.max(0, el.offsetHeight - Math.min(el.offsetHeight, visivel[nome]()));
+    function aplicar(){
+      if(!isMobile()){ el.style.transform = ''; el.style.height = ''; return; }
+      if(topo){
+        // altura da gaveta baixinha vira variável CSS: o que fica no mapa abaixo dela usa esse valor
+        document.documentElement.style.setProperty('--sheet-peek', visivel.peek() + 'px');
+        el.style.height = Math.max(visivel.peek(), visivel[atual]()) + 'px';
+        return;
+      }
+      // altura da gaveta baixinha vira variável CSS: os botões do mapa ficam logo acima dela
+      document.documentElement.style.setProperty('--sheet-peek', visivel.peek() + 'px');
+      el.style.transform = `translateY(${offset(atual)}px)`;
+    }
+    function set(nome, silencioso){
+      if(!ORDER.includes(nome)) return;
+      const mudou = nome !== atual;
+      atual = nome;
+      el.dataset.detent = nome;
+      aplicar();
+      if(mudou && !silencioso){ haptic('light'); if(opts.onChange) opts.onChange(nome); }
+    }
+    let y0 = 0, t0 = 0, base = 0, dy = 0;
+    const start = e => {
+      if(!isMobile()) return;
+      arrastando = true; y0 = e.touches[0].clientY; t0 = Date.now(); dy = 0;
+      base = topo ? el.offsetHeight : offset(atual);
+      el.style.transition = 'none';
+    };
+    const move = e => {
+      if(!arrastando) return;
+      dy = e.touches[0].clientY - y0;
+      if(Math.abs(dy) < 6) return;                         // toque, não arrasto
+      if(topo){
+        // puxar para BAIXO aumenta a gaveta; para cima diminui (com "borracha" nas pontas)
+        const h = Math.min(visivel.full() + 30, Math.max(visivel.peek() - 16, base + dy));
+        el.style.height = h + 'px';
+        return;
+      }
+      const max = offset('peek');
+      const y = Math.min(max + 40, Math.max(-20, base + dy)); // pequena "borracha" nas pontas
+      el.style.transform = `translateY(${y}px)`;
+    };
+    const end = () => {
+      if(!arrastando) return;
+      arrastando = false;
+      el.style.transition = '';
+      if(Math.abs(dy) < 6){ aplicar(); return; }
+      const v = dy / Math.max(1, Date.now() - t0);         // px por ms (positivo = para baixo)
+      const i = ORDER.indexOf(atual);
+      const maior = ORDER[Math.min(ORDER.length - 1, i + 1)], menor = ORDER[Math.max(0, i - 1)];
+      let alvo;
+      if(topo){
+        // presa no topo: gesto para baixo abre mais, para cima fecha
+        if(v > 0.5) alvo = maior;
+        else if(v < -0.5) alvo = menor;
+        else {
+          const h = base + dy;
+          alvo = ORDER.reduce((m, n) => Math.abs(visivel[n]() - h) < Math.abs(visivel[m]() - h) ? n : m, 'peek');
+        }
+      }
+      else if(v > 0.5) alvo = menor;
+      else if(v < -0.5) alvo = maior;
+      else {
+        const y = base + dy;
+        alvo = ORDER.reduce((m, n) => Math.abs(offset(n) - y) < Math.abs(offset(m) - y) ? n : m, 'peek');
+      }
+      if(alvo === atual) aplicar(); else set(alvo);
+    };
+    (opts.handles || []).forEach(h => {
+      if(!h) return;
+      h.addEventListener('touchstart', start, {passive:true});
+      h.addEventListener('touchmove', move, {passive:true});
+      h.addEventListener('touchend', end);
+      h.addEventListener('touchcancel', end);
+    });
+    window.addEventListener('resize', aplicar);
+    el.dataset.detent = atual;
+    requestAnimationFrame(aplicar);
+    return {set, get: () => atual, refresh: aplicar};
+  }
+
   window.UI = {
     isMobile, reduceMotion, wait, esc, haptic,
     alert, confirm, actions, toast,
@@ -399,6 +524,6 @@
     skel, skeleton,
     countTo, stagger, shake,
     layers:{open:openLayer, close:closeLayer, swap:swapLayer},
-    draggableSheet
+    draggableSheet, detentSheet
   };
 })();
